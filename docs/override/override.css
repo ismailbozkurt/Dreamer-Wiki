@@ -1,0 +1,14 @@
+/* Fully hide the top navigation header */
+.md-header {
+  display: none !important;
+}
+
+/* Remove top padding so content shifts up */
+.md-main {
+  padding-top: 0 !important;
+}
+
+/* Fix sticky nav layout if needed */
+.md-content {
+  margin-top: 0 !important;
+}
