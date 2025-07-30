@@ -4,65 +4,59 @@ site_url: https://ismailbozkurt.github.io/Dreamer-Wiki/
 
 repo_url: https://github.com/ismailbozkurt/Dreamer-Wiki/
 edit_uri: blob/main/docs/
+
 theme:
   name: material
-  extra_css:
-  - override/override.css
-  custom_dir: overrides
   color_mode: auto
   user_color_mode_toggle: true
-  features:
-    - navigation.sections
-    - toc.integrate
-    - navigation.top
-    - search.suggest
-    - search.highlight
-    - content.tabs.link
-    - content.code.annotation
-    - content.code.copy
-  language: en
+  icon:
+    repo: fontawesome/brands/github
   palette:
-  - scheme: default
-    toggle:
-      icon: material/toggle-switch-off-outline 
-      name: Switch to dark mode
-    primary: black
-    accent: purple 
-  - scheme: slate 
-    toggle:
-      icon: material/toggle-switch
-      name: Switch to light mode    
-    primary: black       # 🟢 <- This changes the green header
-    accent: lime
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
 
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
 
-plugins:
-  - social
-  - search
+  features:
+    - content.code.copy
+    - content.action.edit
+    - content.action.view
+    - content.tooltips
+    - navigation.tracking
+    - navigation.top
+    - search.share
+    - search.suggest
 
-extra:
-  social:
-    - icon: fontawesome/brands/github-alt
-      link: https://github.com/ismailbozkurt
-    - icon: fontawesome/brands/linkedin
-      link: https://www.linkedin.com/in/ismail-bozkurtr/
+extra_css:
+  - custom.css
 
 markdown_extensions:
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - tables
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
-  - admonition
-  - pymdownx.arithmatex:
-      generic: true
-  - footnotes
-  - pymdownx.details
-  - pymdownx.superfences
-  - pymdownx.mark
   - attr_list
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
-copyright: |
-  &copy; 2025 <a href="https://github.com/ismailbozkurt"  target="_blank" rel="noopener">İsmail BOZKURT</a>
+plugins:
+  - search
+  - git-revision-date-localized
+  - social
