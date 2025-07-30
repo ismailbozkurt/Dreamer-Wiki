@@ -1,8 +1,8 @@
 site_name: Dreamer's Wiki
 site_description: 'Another Cyber Security Wiki'
-site_url: https://ismailbozkurt.github.io/Dreamer-Wiki
+site_url: https://ismailbozkurt.github.io/Dreamer-Wiki/
 
-repo_url: https://github.com/ismailbozkurt/Dreamer-Wiki
+repo_url: https://github.com/ismailbozkurt/Dreamer-Wiki/
 edit_uri: blob/main/docs/
 theme:
   name: material
