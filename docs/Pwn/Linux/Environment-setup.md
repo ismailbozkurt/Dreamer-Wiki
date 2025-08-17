@@ -23,12 +23,14 @@ While disassembler tools such as **IDA Pro**, **Binary Ninja**, **Ghidra**, and 
 ### Dockerfile
 
 ```dockerfile
-# Bootstrapped from https://github.com/LiveOverflow/pwn_docker_example/blob/master/ctf/Dockerfile
-# Thanks, LiveOverflow!
-
-###
-# Build the docker container -> build.sh
-# Run the docker container   -> run.sh
+# =========================================================
+#  CTF Exploitation Dockerfile
+#  Base: Ubuntu 24.04
+#  Inspired by LiveOverflow's pwn_docker_example
+# =========================================================
+### 
+# Build the docker container -> build.sh 
+# Run the docker container -> run.sh 
 # Get a shell in the container -> shell.sh
 
 FROM ubuntu:24.04
@@ -36,22 +38,28 @@ FROM ubuntu:24.04
 ENV LC_CTYPE=C.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive
 
+# ---------------------------------------------------------
+# Copy configs (rizin)
+# ---------------------------------------------------------
 COPY dot_rizinrc /root/.rizinrc
 
+# ---------------------------------------------------------
+# Core system packages
+# ---------------------------------------------------------
 RUN apt-get update && \
-    apt-get install -y \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        wget \
+        git \
         build-essential \
-        cargo \
         file \
         elfutils \
-        bsdmainutils \
         patchelf \
         gdbserver \
         jq \
         strace \
         ltrace \
-        curl \
-        wget \
         rubygems \
         gcc \
         dnsutils \
@@ -67,8 +75,6 @@ RUN apt-get update && \
         python3-dev \
         libssl-dev \
         libffi-dev \
-        wget \
-        git \
         make \
         procps \
         pipx \
@@ -77,8 +83,33 @@ RUN apt-get update && \
         libxt-dev \
         libxaw7-dev \
         emacs-nox \
+        pkg-config \
+        liblzma-dev \
+        socat \
+        rr \
+        clang \
+        llvm \
+        lldb \
+        ruby-dev \
         tmux && \
-    pipx ensurepath && \
+    rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------
+# Rust installation (via rustup)
+# ---------------------------------------------------------
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+      | sh -s -- -y --default-toolchain stable
+
+# Cargo binaries -> add to PATH permanently
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Quick check (not required but useful for build logs)
+RUN rustup --version && cargo --version
+
+# ---------------------------------------------------------
+# Python tools
+# ---------------------------------------------------------
+RUN pipx ensurepath && \
     pipx install uv && \
     pip3 install --break-system-packages \
         capstone \
@@ -92,42 +123,49 @@ RUN apt-get update && \
         ninja \
         z3-solver \
         pyvex \
-        archinfo && \
-    mkdir /tools && \
-    cd /tools && \
+        archinfo \
+        angr \
+        frida-tools \
+        angrop
+
+# ---------------------------------------------------------
+# Exploitation tools
+# ---------------------------------------------------------
+RUN mkdir /tools && cd /tools && \
     git clone https://github.com/JonathanSalwan/ROPgadget && \
-    cd /tools && \
     git clone https://github.com/niklasb/libc-database && \
-    # wget -O /root/.gdbinit-gef.py -q https://raw.githubusercontent.com/hugsy/gef/main/gef.py && \
-    wget -O /root/.tmux.conf -q https://raw.githubusercontent.com/ismailbozkurt/HACKTHEBOX-WRITEUPS/refs/heads/master/.tmux.conf-updated && \
-    # echo '#source /root/.gdbinit-gef.py' >> /root/.gdbinit && \
-    cd /tools && \
+    wget -O /root/.tmux.conf -q \
+        https://raw.githubusercontent.com/ismailbozkurt/HACKTHEBOX-WRITEUPS/refs/heads/master/.tmux.conf-updated && \
     git clone --recurse-submodules https://github.com/rizinorg/rizin && \
-    cd rizin && \
-    meson build && \
-    ninja -C build && \
-    ninja -C build install && \
-    cd /tools && \
-    git clone https://github.com/radareorg/radare2 && \
+    cd rizin && meson build && ninja -C build && ninja -C build install && \
+    cd /tools && git clone https://github.com/radareorg/radare2 && \
     radare2/sys/install.sh
 
+# ---------------------------------------------------------
+# one_gadget (Ruby gem)
+# ---------------------------------------------------------
 RUN gem install one_gadget
+RUN gem install seccomp-tools
+# ---------------------------------------------------------
+# Rust-based exploitation tools
+# ---------------------------------------------------------
+RUN cargo install ropr
+RUN cargo install pwninit 
 
-RUN cargo install ropr && \
-    echo "export PATH=/root/.cargo/bin:$PATH" >> ~/.bashrc
-
+# ---------------------------------------------------------
+# pwndbg & gef
+# ---------------------------------------------------------
 RUN cd /tools && \
     git clone https://github.com/pwndbg/pwndbg && \
-    cd pwndbg && \
-    ./setup.sh && \
-    cd /tools && \
-    git clone https://github.com/bata24/gef && \
-    cd gef && \
-    bash ./install.sh
+    cd pwndbg && ./setup.sh && \
+    cd /tools && git clone https://github.com/bata24/gef && \
+    cd gef && bash ./install.sh
 
+# ---------------------------------------------------------
+# Copy gdbinit configuration
+# ---------------------------------------------------------
 COPY dot_gdbinit /root/.gdbinit
 ```
-
 
 #### Binary Exploitation & Reverse Engineering
 
@@ -224,7 +262,13 @@ This `run.sh` script launches the Docker container in the background with privil
 
 ```bash
 #!/bin/sh
-docker run --rm -v "$(pwd):/host" -v "$(pwd)/logs:/logs" --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -d --name docker-binaryexploitation --privileged -i docker-binaryexploitation:ubuntu24.04
+docker run --rm \
+  -v "$(pwd):/host" \
+  -v "$(pwd)/logs:/logs" \
+  --cap-add=SYS_PTRACE \
+  --security-opt seccomp=unconfined \
+  -d --name docker-binaryexploitation \
+  -it docker-binaryexploitation:ubuntu24.04
 ```
 
 ### shell.sh
