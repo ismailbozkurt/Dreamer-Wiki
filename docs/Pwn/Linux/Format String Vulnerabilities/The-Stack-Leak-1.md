@@ -1,5 +1,5 @@
 ---
-title: "Part II – Information Disclosure with Format String Attack"
+title: "Part II – Format String Attack"
 description: "Exploring how format string vulnerabilities enable attackers to leak memory using %x, %p, and %s, and how to find stack offsets with trial-and-error and pwntools."
 author: "İsmail BOZKURT"
 date: 2025-08-19
@@ -14,7 +14,7 @@ categories:
   - Format-String-Attack
 ---
 
-# 02 - The Stack Leak
+# 02 - The Stack Leak 1
 
 ## Peeking into the Stack
 
