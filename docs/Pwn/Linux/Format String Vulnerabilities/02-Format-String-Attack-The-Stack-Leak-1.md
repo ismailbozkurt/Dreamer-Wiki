@@ -1,5 +1,5 @@
 ---
-title: "Part II – Format String Attack"
+title: "The Stack Leak 1"
 description: "Exploring how format string vulnerabilities enable attackers to leak memory using %x, %p, and %s, and how to find stack offsets with trial-and-error and pwntools."
 author: "İsmail BOZKURT"
 date: 2025-08-19
@@ -14,7 +14,7 @@ categories:
   - Format-String-Attack
 ---
 
-# 02 - The Stack Leak 1
+# 02 Format String Attack - The Stack Leak 1
 
 ## Peeking into the Stack
 
@@ -137,7 +137,7 @@ There are several ways achieve **SECRET** value. So for practice you will find s
 
 ### 1 - Manual way (Easy)
 
-As mentioned earlier in [01 - Introduction to Format String Vulnerabilities](https://ismailbozkurt.github.io/Dreamer-Wiki/Pwn/Linux/Format%20String%20Vulnerabilities/Introduction/), **%p** leak stack as integer without deference and **%s** format specifier deference the addresses in stack. 
+As mentioned earlier in [01 - Introduction to Format String Vulnerabilities](/Dreamer-Wiki/Pwn/Linux/Format%20String%20Vulnerabilities/01-Introduction/), **%p** leak stack as integer without deference and **%s** format specifier deference the addresses in stack. 
 
 The below screenshot at **22th** index **SECRET** value pointer address. At 28th index the string first 2 byte start. But big portion of our **A**'s is in **29th** index. So the offset value is **29**.
 

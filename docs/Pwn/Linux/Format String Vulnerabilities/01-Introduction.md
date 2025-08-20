@@ -1,5 +1,5 @@
 ---
-title: "Part I – Introduction to Format String Vulnerabilities"
+title: "Introduction to Format String Vulnerabilities"
 description: "An introduction to format specifiers in C/C++, why they exist, and how improper usage can lead to powerful exploitation primitives such as arbitrary read and write."
 author: "İsmail BOZKURT"
 date: 2025-08-18
